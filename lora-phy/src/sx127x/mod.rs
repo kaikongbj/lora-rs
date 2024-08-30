@@ -1,4 +1,4 @@
-mod radio_kind_params;
+pub mod radio_kind_params;
 mod sx1272;
 pub use sx1272::Sx1272;
 mod sx1276;
@@ -70,7 +70,7 @@ where
         self.intf.write(&write_buffer, false).await
     }
 
-    async fn read_register(&mut self, register: Register) -> Result<u8, RadioError> {
+    pub async fn read_register(&mut self, register: Register) -> Result<u8, RadioError> {
         let write_buffer = [register.read_addr()];
         let mut read_buffer = [0x00u8];
         self.intf.read(&write_buffer, &mut read_buffer).await?;
