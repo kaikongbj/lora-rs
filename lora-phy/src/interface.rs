@@ -51,7 +51,7 @@ where
     // Request a read, filling the provided buffer.
     pub async fn read(&mut self, write_buffer: &[u8], read_buffer: &mut [u8]) -> Result<(), RadioError> {
         {
-            let mut ops = [Operation::Write(write_buffer), Operation::Read(read_buffer)];
+            let mut ops = [Operation::Transfer(read_buffer,write_buffer)];
 
             self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
         }
