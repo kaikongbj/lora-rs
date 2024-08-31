@@ -1,5 +1,7 @@
 pub mod radio_kind_params;
 mod sx1272;
+
+use alloc::vec;
 pub use sx1272::Sx1272;
 mod sx1276;
 pub use sx1276::Sx1276;
@@ -110,8 +112,11 @@ where
     C: Sx127xVariant,
 {
     async fn init_lora(&mut self, is_public_network: bool) -> Result<(), RadioError> {
+        let ver = self.read_register(Register::RegVersion).await?;
+        assert_eq!(ver, 0x12);
         if self.config.tcxo_used {
             self.write_register(C::reg_txco(), TCXO_FOR_OSCILLATOR).await?;
+            assert_eq!(self.read_register(C::reg_txco()).await?, TCXO_FOR_OSCILLATOR);
         }
 
         let syncword = if is_public_network {
@@ -120,7 +125,7 @@ where
             LORA_MAC_PRIVATE_SYNCWORD
         };
         self.write_register(Register::RegSyncWord, syncword).await?;
-
+        assert_eq!(self.read_register(Register::RegSyncWord).await?, syncword);
         self.set_tx_rx_buffer_base_address(0, 0).await?;
         Ok(())
     }
@@ -273,7 +278,7 @@ where
             Register::RegPreambleMsb,
             ((pkt_params.preamble_length >> 8) & 0x00ff) as u8,
         )
-        .await?;
+            .await?;
         self.write_register(Register::RegPreambleLsb, (pkt_params.preamble_length & 0x00ff) as u8)
             .await?;
 
@@ -316,6 +321,9 @@ where
         self.write_register(Register::RegFifoAddrPtr, 0x00u8).await?;
         self.write_register(Register::RegPayloadLength, 0x00u8).await?;
         self.write_buffer(Register::RegFifo, payload).await?;
+        let mut payload_verify=vec![0;payload.len()];
+        self.read_buffer(Register::RegFifo,&mut *payload_verify).await?;
+        assert_eq!(payload, payload_verify);
         self.write_register(Register::RegPayloadLength, payload.len() as u8)
             .await
     }
@@ -414,7 +422,7 @@ where
                     Register::RegIrqFlagsMask,
                     IrqMask::All.value() ^ IrqMask::TxDone.value(),
                 )
-                .await?;
+                    .await?;
 
                 let mut dio_mapping_1 = self.read_register(Register::RegDioMapping1).await?;
                 dio_mapping_1 = (dio_mapping_1 & DioMapping1Dio0::Mask.value()) | DioMapping1Dio0::TxDone.value();
@@ -427,11 +435,11 @@ where
                     Register::RegIrqFlagsMask,
                     IrqMask::All.value()
                         ^ (IrqMask::RxDone.value()
-                            | IrqMask::RxTimeout.value()
-                            | IrqMask::CRCError.value()
-                            | IrqMask::HeaderValid.value()),
+                        | IrqMask::RxTimeout.value()
+                        | IrqMask::CRCError.value()
+                        | IrqMask::HeaderValid.value()),
                 )
-                .await?;
+                    .await?;
 
                 // HeaderValid and CRCError are mutually exclusive when attempting to
                 // trigger DIO-based interrupt, so our approach is to trigger HeaderValid
@@ -449,7 +457,7 @@ where
                     Register::RegIrqFlagsMask,
                     IrqMask::All.value() ^ (IrqMask::CADDone.value() | IrqMask::CADActivityDetected.value()),
                 )
-                .await?;
+                    .await?;
 
                 let mut dio_mapping_1 = self.read_register(Register::RegDioMapping1).await?;
                 dio_mapping_1 = (dio_mapping_1 & DioMapping1Dio0::Mask.value()) | DioMapping1Dio0::CadDone.value();
