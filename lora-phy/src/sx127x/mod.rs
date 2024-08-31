@@ -198,6 +198,7 @@ where
     async fn set_standby(&mut self) -> Result<(), RadioError> {
         self.write_register(Register::RegOpMode, LoRaMode::Standby.value())
             .await?;
+        assert_eq!(self.read_register(Register::RegOpMode).await?, LoRaMode::Standby.value());
         self.intf.iv.disable_rf_switch().await
     }
 
@@ -207,7 +208,7 @@ where
         let buf = [Register::RegOpMode.write_addr(), LoRaMode::Sleep.value()];
         // NB! Switching to sleep mode is "sleep" command...
         self.intf.write(&buf, true).await?;
-
+        assert_eq!(self.read_register(Register::RegOpMode).await?, LoRaMode::Sleep.value());
         Ok(())
     }
 
@@ -321,9 +322,6 @@ where
         self.write_register(Register::RegFifoAddrPtr, 0x00u8).await?;
         self.write_register(Register::RegPayloadLength, 0x00u8).await?;
         self.write_buffer(Register::RegFifo, payload).await?;
-        let mut payload_verify=vec![0;payload.len()];
-        self.read_buffer(Register::RegFifo,&mut *payload_verify).await?;
-        assert_eq!(payload, payload_verify);
         self.write_register(Register::RegPayloadLength, payload.len() as u8)
             .await
     }
@@ -331,7 +329,9 @@ where
     async fn do_tx(&mut self) -> Result<(), RadioError> {
         self.intf.iv.enable_rf_switch_tx().await?;
 
-        self.write_register(Register::RegOpMode, LoRaMode::Tx.value()).await
+        let res=self.write_register(Register::RegOpMode, LoRaMode::Tx.value()).await;
+        assert_eq!(self.read_register(Register::RegOpMode).await?, LoRaMode::Tx.value());
+        res
     }
 
     async fn do_rx(&mut self, rx_mode: RxMode) -> Result<(), RadioError> {
@@ -355,7 +355,9 @@ where
         self.write_register(Register::RegFifoAddrPtr, 0x00u8).await?;
         self.write_register(Register::RegPayloadLength, 0xffu8).await?;
 
-        self.write_register(Register::RegOpMode, mode.value()).await
+    let res=    self.write_register(Register::RegOpMode, mode.value()).await;
+        assert_eq!(self.read_register(Register::RegOpMode).await?, mode.value());
+        res
     }
 
     async fn get_rx_payload(
@@ -409,7 +411,9 @@ where
         }
         self.write_register(Register::RegLna, lna_gain_final).await?;
 
-        self.write_register(Register::RegOpMode, LoRaMode::Cad.value()).await
+        let res=self.write_register(Register::RegOpMode, LoRaMode::Cad.value()).await;
+        assert_eq!(self.read_register(Register::RegOpMode).await?, LoRaMode::Cad.value());
+        res
     }
 
     // Set the IRQ mask to disable unwanted interrupts,
