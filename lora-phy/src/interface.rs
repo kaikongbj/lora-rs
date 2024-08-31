@@ -1,3 +1,4 @@
+use alloc::vec;
 use defmt::trace;
 use embedded_hal_async::spi::{Operation, SpiDevice};
 
@@ -37,7 +38,9 @@ where
         payload: &[u8],
         is_sleep_command: bool,
     ) -> Result<(), RadioError> {
-        let mut ops = [Operation::Write(write_buffer), Operation::Write(payload)];
+        let data = [write_buffer, payload].concat();
+        let mut read_data = vec![0u8; data.len()];
+        let mut ops = [Operation::Transfer(&mut *read_data, &*data)];
         self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
         trace!("write_buf: {=[u8]:02x} -> {=[u8]:02x}", write_buffer, payload);
 
@@ -51,7 +54,7 @@ where
     // Request a read, filling the provided buffer.
     pub async fn read(&mut self, write_buffer: &[u8], read_buffer: &mut [u8]) -> Result<(), RadioError> {
         {
-            let mut ops = [Operation::Transfer(read_buffer,write_buffer)];
+            let mut ops = [Operation::Transfer(read_buffer, write_buffer)];
 
             self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
         }
@@ -72,13 +75,15 @@ where
     pub async fn read_with_status(&mut self, write_buffer: &[u8], read_buffer: &mut [u8]) -> Result<u8, RadioError> {
         let mut status = [0u8];
         {
+            let data = [write_buffer, &status, read_buffer].concat();
+            let mut read_data = vec![0u8; data.len()];
             let mut ops = [
-                Operation::Write(write_buffer),
-                Operation::Read(&mut status),
-                Operation::Read(read_buffer),
+                Operation::Transfer(&mut *read_data, &*data),
             ];
 
             self.spi.transaction(&mut ops).await.map_err(|_| SPI)?;
+            status.copy_from_slice(&read_data[write_buffer.len()..write_buffer.len() + 1]);
+            read_buffer.copy_from_slice(&read_data[write_buffer.len() + 1..]);
         }
 
         self.iv.wait_on_busy().await?;

@@ -6,6 +6,7 @@
 //! ## Feature flags
 #![doc = document_features::document_features!(feature_label = r#"<span class="stab portability"><code>{feature}</code></span>"#)]
 #![doc = include_str!("../README.md")]
+extern crate alloc;
 
 #[cfg(feature = "lorawan-radio")]
 #[cfg_attr(docsrs, doc(cfg(feature = "lorawan-radio")))]
