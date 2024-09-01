@@ -32,6 +32,7 @@ pub use embedded_hal_async::delay::DelayNs;
 use interface::*;
 use mod_params::*;
 use mod_traits::*;
+use crate::sx127x::radio_kind_params::Register;
 
 /// Provides the physical layer API to support LoRa chips
 pub struct LoRa<RK, DLY>
@@ -249,8 +250,13 @@ where
             self.radio_kind.do_rx(listen_mode).await?;
             loop {
                 // self.wait_for_irq().await?;
-                self.delay.delay_ms(20);
-                match self.radio_kind.process_irq_event(self.radio_mode, None, true).await {
+                loop {
+                    if self.radio_kind.read_register(Register::RegIrqFlags).await? != 0 {
+                        break;
+                    };
+                    self.delay.delay_ms(1);
+                }
+                match self.radio_kind.process_irq_event(self.radio_mode, None, false).await {
                     Ok(Some(actual_state)) => match actual_state {
                         IrqState::PreambleReceived => continue,
                         IrqState::Done => {

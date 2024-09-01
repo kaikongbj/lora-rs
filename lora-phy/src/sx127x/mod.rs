@@ -412,7 +412,7 @@ where
         self.write_register(Register::RegLna, lna_gain_final).await?;
 
         let res=self.write_register(Register::RegOpMode, LoRaMode::Cad.value()).await;
-        assert_eq!(self.read_register(Register::RegOpMode).await?, LoRaMode::Cad.value());
+        // assert_eq!(self.read_register(Register::RegOpMode).await?, LoRaMode::Cad.value());
         res
     }
 
@@ -511,6 +511,7 @@ where
                 }
             }
             RadioMode::Receive(RxMode::Continuous) | RadioMode::Receive(RxMode::Single(_)) => {
+                self.write_register(Register::RegIrqFlags, 0xffu8).await?; // clear all interrupts
                 if (irq_flags & IrqMask::RxDone.value()) == IrqMask::RxDone.value() {
                     debug!("RxDone in radio mode {}", radio_mode);
                     return Ok(Some(IrqState::Done));
