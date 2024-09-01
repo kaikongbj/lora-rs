@@ -250,12 +250,7 @@ where
             self.radio_kind.do_rx(listen_mode).await?;
             loop {
                 // self.wait_for_irq().await?;
-                loop {
-                    if self.radio_kind.read_register(Register::RegIrqFlags).await? != 0 {
-                        break;
-                    };
-                    self.delay.delay_ms(1);
-                }
+                self.delay.delay_ms(1);
                 match self.radio_kind.process_irq_event(self.radio_mode, None, false).await {
                     Ok(Some(actual_state)) => match actual_state {
                         IrqState::PreambleReceived => continue,
