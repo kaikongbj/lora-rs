@@ -248,7 +248,8 @@ where
         if let RadioMode::Receive(listen_mode) = self.radio_mode {
             self.radio_kind.do_rx(listen_mode).await?;
             loop {
-                self.wait_for_irq().await?;
+                // self.wait_for_irq().await?;
+                self.delay.delay_ms(20);
                 match self.radio_kind.process_irq_event(self.radio_mode, None, true).await {
                     Ok(Some(actual_state)) => match actual_state {
                         IrqState::PreambleReceived => continue,
